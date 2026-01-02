@@ -66,16 +66,35 @@ jobs:
 
       - name: Test Docker image
         working-directory: ./go
+        timeout-minutes: 5
         run: |
           docker run --rm -d --name test-jokes-api -p 8100:8100 jokes-api:latest
-          sleep 5
-          if curl -f http://localhost:8100/ > /dev/null 2>&1; then
-            echo "✓ Docker container is running and responding"
-          else
-            echo "✗ Docker container is not responding"
+          
+          # Health check with retries
+          MAX_RETRIES=10
+          RETRY_INTERVAL=2
+          RETRY_COUNT=0
+          HEALTH_CHECK_PASSED=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f http://localhost:8100/ > /dev/null 2>&1; then
+              echo "✓ Docker container is running and responding (attempt $((RETRY_COUNT + 1)))"
+              HEALTH_CHECK_PASSED=true
+              break
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⚠️  Container not ready yet (attempt $RETRY_COUNT/$MAX_RETRIES), waiting..."
+              sleep $RETRY_INTERVAL
+            fi
+          done
+          
+          docker stop test-jokes-api
+          
+          if [ "$HEALTH_CHECK_PASSED" = "false" ]; then
+            echo "✗ Docker container is not responding after $MAX_RETRIES attempts"
             exit 1
           fi
-          docker stop test-jokes-api
 
   deploy:
     name: Deploy to Production
@@ -87,12 +106,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate secrets
+        run: |
+          echo "Validating required secrets..."
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ Error: SSH_PRIVATE_KEY is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "❌ Error: DEPLOY_HOST is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DEPLOY_USER }}" ]; then
+            echo "❌ Error: DEPLOY_USER is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DEPLOY_PORT }}" ]; then
+            echo "❌ Error: DEPLOY_PORT is not set"
+            exit 1
+          fi
+          echo "✓ All required secrets are present"
+
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known hosts
+        timeout-minutes: 2
         run: |
           ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
@@ -106,42 +147,113 @@ jobs:
           docker save jokes-api:latest | gzip > jokes-api.tar.gz
 
       - name: Prepare server directory
+        timeout-minutes: 2
         run: |
-          ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          ssh -o ConnectTimeout=10 -o ServerAliveInterval=60 -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             mkdir -p /opt/jokes-api
             mkdir -p /opt/jokes-api/data
           EOF
 
       - name: Copy files to server
+        timeout-minutes: 5
         run: |
-          scp -P ${{ secrets.DEPLOY_PORT }} ./go/compose.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
-          scp -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/
+          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} ./go/compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
+          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/
 
       - name: Deploy on server
+        timeout-minutes: 10
         run: |
-          ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          ssh -o ConnectTimeout=10 -o ServerAliveInterval=60 -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             set -e
             cd /opt/jokes-api
             
+            # Save current image for rollback
+            echo "Saving current image for potential rollback..."
+            docker images jokes-api:latest --format "{{.ID}}" | head -1 | xargs -I {} docker tag {} jokes-api:previous || echo "No previous image to save"
+            
             # Load Docker image
+            echo "Loading new Docker image..."
             docker load < jokes-api.tar.gz
             
+            # Tag image with commit SHA
+            docker tag jokes-api:latest jokes-api:${{ github.sha }}
+            
             # Stop and remove old container if exists
+            echo "Stopping old container..."
             docker compose down || true
             
             # Start new container
+            echo "Starting new container..."
             docker compose up -d
             
-            # Clean up old images
-            docker image prune -f
+            # Wait for container to be ready
+            echo "Waiting for container to start..."
+            sleep 3
             
-            # Verify deployment
-            sleep 5
-            if curl -f http://localhost:8100/ > /dev/null 2>&1; then
-              echo "✓ Deployment successful"
+            # Health check with retries
+            echo "Performing health check..."
+            MAX_RETRIES=10
+            RETRY_INTERVAL=2
+            RETRY_COUNT=0
+            HEALTH_CHECK_PASSED=false
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if curl -f http://localhost:8100/ > /dev/null 2>&1; then
+                echo "✓ Health check passed on attempt $((RETRY_COUNT + 1))"
+                HEALTH_CHECK_PASSED=true
+                break
+              fi
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "⚠️  Health check failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying in $RETRY_INTERVAL seconds..."
+                sleep $RETRY_INTERVAL
+              fi
+            done
+            
+            if [ "$HEALTH_CHECK_PASSED" = "false" ]; then
+              echo "❌ Health check failed after $MAX_RETRIES attempts"
+              echo "Attempting rollback..."
+              
+              # Rollback to previous version
+              if docker images jokes-api:previous --format "{{.ID}}" | grep -q .; then
+                echo "Rolling back to previous image..."
+                docker tag jokes-api:previous jokes-api:latest
+                docker compose down || true
+                docker compose up -d
+                
+                # Wait and check rollback
+                sleep 3
+                ROLLBACK_RETRIES=5
+                ROLLBACK_COUNT=0
+                ROLLBACK_SUCCESS=false
+                
+                while [ $ROLLBACK_COUNT -lt $ROLLBACK_RETRIES ]; do
+                  if curl -f http://localhost:8100/ > /dev/null 2>&1; then
+                    echo "✓ Rollback successful"
+                    ROLLBACK_SUCCESS=true
+                    break
+                  fi
+                  ROLLBACK_COUNT=$((ROLLBACK_COUNT + 1))
+                  sleep 2
+                done
+                
+                if [ "$ROLLBACK_SUCCESS" = "false" ]; then
+                  echo "❌ Rollback failed - manual intervention required"
+                  exit 1
+                fi
+              else
+                echo "❌ No previous image available for rollback"
+                exit 1
+              fi
             else
-              echo "✗ Deployment verification failed"
-              exit 1
+              echo "✓ Deployment successful"
+              
+              # Clean up old images (keep previous for safety until next deployment)
+              echo "Cleaning up old images..."
+              docker image prune -f
+              
+              # Remove old previous image if deployment was successful
+              docker rmi jokes-api:previous 2>/dev/null || true
             fi
           EOF
 
