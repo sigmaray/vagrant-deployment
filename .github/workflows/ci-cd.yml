@@ -95,6 +95,8 @@ jobs:
       - name: Add server to known hosts
         run: |
           ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          echo '--------------'
+          cat ~/.ssh/known_hosts
 
       - name: Build Docker image for deployment
         working-directory: ./go
