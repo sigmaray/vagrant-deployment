@@ -120,7 +120,7 @@ jobs:
 
       - name: Prepare server directory
         run: |
-          ssh -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
+          ssh  -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
             mkdir -p /opt/jokes-api
             mkdir -p /opt/jokes-api/data
           EOF
