@@ -103,7 +103,7 @@ jobs:
           sudo apt update -y && sudo apt install -y dos2unix
           mkdir -p ~/.ssh/
           echo "${{ vars.SSH_PRIVATE_KEY }}" > ~/.ssh/private.key
-          dos2unix ~/.ssh/id_rsa
+          dos2unix ~/.ssh/private.key
           chmod 600 ~/.ssh/private.key
           echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
           eval $(ssh-agent -s)
@@ -143,12 +143,12 @@ jobs:
           scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} ./go/compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
           # scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
       
-      - name: Breakpoint if tests failed
-        if: failure()
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
-          authorized-users: sigmaray
+      # - name: Breakpoint if tests failed
+      #   if: failure()
+      #   uses: namespacelabs/breakpoint-action@v0
+      #   with:
+      #     duration: 30m
+      #     authorized-users: sigmaray
 
       # - name: Deploy on server
       #   run: |
