@@ -114,7 +114,7 @@ jobs:
 
       - name: Copy files to server
         run: |
-          scp -P ${{ secrets.DEPLOY_PORT }} ./go/compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
+          scp -P ${{ secrets.DEPLOY_PORT }} ./go/compose.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
           scp -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/
 
       - name: Deploy on server
