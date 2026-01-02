@@ -108,9 +108,7 @@ jobs:
           echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/private.key
-          echo '---'
-          echo "${{ vars.SSH_PRIVATE_KEY }}"
-          echo '---'
+          echo '---'          
           # ssh-keyscan -p ${{ vars.DEPLOY_PORT }} -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
           # echo '--------------'
           # cat ~/.ssh/known_hosts
