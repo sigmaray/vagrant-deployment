@@ -113,6 +113,13 @@ jobs:
             mkdir -p /opt/jokes-api
             mkdir -p /opt/jokes-api/data
           EOF
+      
+      - name: Breakpoint if tests failed
+        if: failure()
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: sigmaray
 
       - name: Copy files to server
         run: |
