@@ -87,12 +87,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Add server to known hosts
-        run: |
-          echo '---'
-          echo "${{ secrets.SSH_PRIVATE_KEY }}"
-          echo '---'
-
       # - name: Set up SSH
       #   uses: webfactory/ssh-agent@v0.9.0
       #   with:
@@ -105,9 +99,9 @@ jobs:
           echo "${{ vars.SSH_PRIVATE_KEY }}" > ~/.ssh/private.key
           dos2unix ~/.ssh/private.key
           chmod 600 ~/.ssh/private.key
-          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
-          eval $(ssh-agent -s)
-          ssh-add ~/.ssh/private.key
+          # echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+          # eval $(ssh-agent -s)
+          # ssh-add ~/.ssh/private.key
 
       - name: Build Docker image for deployment
         working-directory: ./go
@@ -125,25 +119,11 @@ jobs:
             mkdir -p /opt/jokes-api/data
           EOF
       
-      # - name: Breakpoint if tests failed
-      #   if: failure()
-      #   uses: namespacelabs/breakpoint-action@v0
-      #   with:
-      #     duration: 30m
-      #     authorized-users: sigmaray
-
       - name: Copy files to server
         run: |        
           scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} ./go/compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
           scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
       
-      # - name: Breakpoint if tests failed
-      #   if: failure()
-      #   uses: namespacelabs/breakpoint-action@v0
-      #   with:
-      #     duration: 30m
-      #     authorized-users: sigmaray
-
       - name: Deploy on server
         run: |
           ssh -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
