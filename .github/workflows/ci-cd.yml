@@ -150,22 +150,22 @@ jobs:
         timeout-minutes: 2
         run: |
           ssh -o ConnectTimeout=10 -o ServerAliveInterval=60 -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            mkdir -p /opt/jokes-api
-            mkdir -p /opt/jokes-api/data
+            mkdir -p /d/jokes-api
+            mkdir -p /d/jokes-api/data
           EOF
 
       - name: Copy files to server
         timeout-minutes: 5
         run: |
-          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} ./go/compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
-          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/
+          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} ./go/compose.prod.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/d/jokes-api/compose.yml
+          scp -o ConnectTimeout=10 -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/d/jokes-api/
 
       - name: Deploy on server
         timeout-minutes: 10
         run: |
           ssh -o ConnectTimeout=10 -o ServerAliveInterval=60 -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             set -e
-            cd /opt/jokes-api
+            cd /d/jokes-api
             
             # Save current image for rollback
             echo "Saving current image for potential rollback..."
