@@ -127,10 +127,10 @@ jobs:
             docker load < jokes-api.tar.gz
             
             # Stop and remove old container if exists
-            docker-compose down || true
+            docker compose down || true
             
             # Start new container
-            docker-compose up -d
+            docker compose up -d
             
             # Clean up old images
             docker image prune -f
