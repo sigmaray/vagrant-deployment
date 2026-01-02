@@ -1,8 +1,6 @@
 services:
   jokes-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: jokes-api:latest
     container_name: jokes-api
     ports:
       - "8100:8100"
@@ -18,4 +16,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
