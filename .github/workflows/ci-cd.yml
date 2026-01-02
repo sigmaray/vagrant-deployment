@@ -107,12 +107,12 @@ jobs:
         run: |
           docker save jokes-api:latest | gzip > jokes-api.tar.gz
 
-      - name: Prepare server directory
-        run: |
-          ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
-            mkdir -p /opt/jokes-api
-            mkdir -p /opt/jokes-api/data
-          EOF
+      # - name: Prepare server directory
+      #   run: |
+      #     ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+      #       mkdir -p /opt/jokes-api
+      #       mkdir -p /opt/jokes-api/data
+      #     EOF
       
       - name: Breakpoint if tests failed
         if: failure()
