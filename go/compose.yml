@@ -1,0 +1,21 @@
+services:
+  jokes-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jokes-api
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - GIN_MODE=release
+      - DB_PATH=./data/jokes.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--method=GET", "http://localhost:8100/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+

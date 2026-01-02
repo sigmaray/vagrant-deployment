@@ -4,6 +4,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
@@ -24,9 +26,23 @@ type jokesResponse struct {
 var db *gorm.DB
 
 func main() {
+	// Определяем путь к базе данных
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./data/jokes.db"
+	}
+
+	// Создаем директорию для базы данных, если её нет
+	dir := filepath.Dir(dbPath)
+	if dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Fatal("Не удалось создать директорию для базы данных:", err)
+		}
+	}
+
 	// Инициализация базы данных
 	var err error
-	db, err = gorm.Open(sqlite.Open("jokes.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Не удалось подключиться к базе данных:", err)
 	}

@@ -1,0 +1,24 @@
+services:
+  jokes-api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: jokes-api-dev
+    ports:
+      - "8100:8100"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - go-mod-cache:/go/pkg/mod
+    environment:
+      - GIN_MODE=debug
+      - CGO_ENABLED=1
+      - DB_PATH=./data/jokes.db
+    command: air -c .air.toml
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+volumes:
+  go-mod-cache:
+

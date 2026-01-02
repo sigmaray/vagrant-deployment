@@ -1,0 +1,36 @@
+FROM golang:1.21-alpine
+
+WORKDIR /app
+
+# Устанавливаем необходимые библиотеки для SQLite и инструменты разработки
+RUN apk --no-cache add \
+    ca-certificates \
+    sqlite \
+    git \
+    make \
+    gcc \
+    musl-dev
+
+# Устанавливаем Air для hot reload и добавляем в PATH
+# Используем версию Air, совместимую с Go 1.21
+ENV PATH="${PATH}:/root/go/bin"
+RUN go install github.com/cosmtrek/air@v1.49.0
+
+# Копируем файлы зависимостей
+COPY go.mod go.sum ./
+
+# Загружаем зависимости
+RUN go mod download
+
+# Копируем конфигурацию Air (будет перезаписан volume в dev режиме)
+COPY .air.toml ./
+
+# Копируем исходный код (будет перезаписан volume в dev режиме)
+COPY main.go ./
+
+# Указываем порт
+EXPOSE 8100
+
+# Команда по умолчанию - запуск через Air
+CMD ["air", "-c", ".air.toml"]
+
