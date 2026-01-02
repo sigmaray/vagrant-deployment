@@ -7,75 +7,75 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build:
-    name: Build Go Application
-    runs-on: ubuntu-latest
+  # build:
+  #   name: Build Go Application
+  #   runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: '1.21'
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+  #     - name: Cache Go modules
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: ~/go/pkg/mod
+  #         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-go-
 
-      - name: Download dependencies
-        working-directory: ./go
-        run: go mod download
+  #     - name: Download dependencies
+  #       working-directory: ./go
+  #       run: go mod download
 
-      - name: Build application
-        working-directory: ./go
-        run: go build -v -o jokes-api .
+  #     - name: Build application
+  #       working-directory: ./go
+  #       run: go build -v -o jokes-api .
 
-      - name: Verify binary
-        working-directory: ./go
-        run: |
-          if [ -f jokes-api ]; then
-            echo "✓ Binary built successfully"
-            ls -lh jokes-api
-          else
-            echo "✗ Binary not found"
-            exit 1
-          fi
+  #     - name: Verify binary
+  #       working-directory: ./go
+  #       run: |
+  #         if [ -f jokes-api ]; then
+  #           echo "✓ Binary built successfully"
+  #           ls -lh jokes-api
+  #         else
+  #           echo "✗ Binary not found"
+  #           exit 1
+  #         fi
 
-  docker-build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: build
+  # docker-build:
+  #   name: Build Docker Image
+  #   runs-on: ubuntu-latest
+  #   needs: build
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
-        working-directory: ./go
-        run: |
-          docker build -t jokes-api:latest -f Dockerfile .
+  #     - name: Build Docker image
+  #       working-directory: ./go
+  #       run: |
+  #         docker build -t jokes-api:latest -f Dockerfile .
 
-      - name: Test Docker image
-        working-directory: ./go
-        run: |
-          docker run --rm -d --name test-jokes-api -p 8100:8100 jokes-api:latest
-          sleep 5
-          if curl -f http://localhost:8100/ > /dev/null 2>&1; then
-            echo "✓ Docker container is running and responding"
-          else
-            echo "✗ Docker container is not responding"
-            exit 1
-          fi
-          docker stop test-jokes-api
+  #     - name: Test Docker image
+  #       working-directory: ./go
+  #       run: |
+  #         docker run --rm -d --name test-jokes-api -p 8100:8100 jokes-api:latest
+  #         sleep 5
+  #         if curl -f http://localhost:8100/ > /dev/null 2>&1; then
+  #           echo "✓ Docker container is running and responding"
+  #         else
+  #           echo "✗ Docker container is not responding"
+  #           exit 1
+  #         fi
+  #         docker stop test-jokes-api
 
   deploy:
     name: Deploy to Production
@@ -90,7 +90,7 @@ jobs:
       - name: Add server to known hosts
         run: |
           echo '---'
-          echo "${{ vars.SSH_PRIVATE_KEY }}"
+          echo "${{ secrets.SSH_PRIVATE_KEY }}"
           echo '---'
 
       # - name: Set up SSH
@@ -101,23 +101,23 @@ jobs:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh/
-          echo "${{ vars.SSH_PRIVATE_KEY }}" > ~/.ssh/private.key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/private.key
           chmod 600 ~/.ssh/private.key
           # echo '---'
-          # echo "${{ vars.SSH_PRIVATE_KEY }}"
+          # echo "${{ secrets.SSH_PRIVATE_KEY }}"
           # echo '---'
           # ssh-keyscan -p ${{ vars.DEPLOY_PORT }} -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
           # echo '--------------'
           # cat ~/.ssh/known_hosts
 
-      - name: Build Docker image for deployment
-        working-directory: ./go
-        run: |
-          docker build -t jokes-api:${{ github.sha }} -t jokes-api:latest -f Dockerfile .
+      # - name: Build Docker image for deployment
+      #   working-directory: ./go
+      #   run: |
+      #     docker build -t jokes-api:${{ github.sha }} -t jokes-api:latest -f Dockerfile .
 
-      - name: Save Docker image
-        run: |
-          docker save jokes-api:latest | gzip > jokes-api.tar.gz
+      # - name: Save Docker image
+      #   run: |
+      #     docker save jokes-api:latest | gzip > jokes-api.tar.gz
 
       # - name: Prepare server directory
       #   run: |
@@ -136,38 +136,38 @@ jobs:
       - name: Copy files to server
         run: |        
           scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} ./go/compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
-          scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
+          # scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
 
-      - name: Deploy on server
-        run: |
-          ssh -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
-            set -e
-            cd /opt/jokes-api
+      # - name: Deploy on server
+      #   run: |
+      #     ssh -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
+      #       set -e
+      #       cd /opt/jokes-api
             
-            # Load Docker image
-            docker load < jokes-api.tar.gz
+      #       # Load Docker image
+      #       docker load < jokes-api.tar.gz
             
-            # Stop and remove old container if exists
-            docker compose down || true
+      #       # Stop and remove old container if exists
+      #       docker compose down || true
             
-            # Start new container
-            docker compose up -d
+      #       # Start new container
+      #       docker compose up -d
             
-            # Clean up old images
-            docker image prune -f
+      #       # Clean up old images
+      #       docker image prune -f
             
-            # Verify deployment
-            sleep 5
-            if curl -f http://localhost:8100/ > /dev/null 2>&1; then
-              echo "✓ Deployment successful"
-            else
-              echo "✗ Deployment verification failed"
-              exit 1
-            fi
-          EOF
+      #       # Verify deployment
+      #       sleep 5
+      #       if curl -f http://localhost:8100/ > /dev/null 2>&1; then
+      #         echo "✓ Deployment successful"
+      #       else
+      #         echo "✗ Deployment verification failed"
+      #         exit 1
+      #       fi
+      #     EOF
 
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -f jokes-api.tar.gz
+      # - name: Cleanup
+      #   if: always()
+      #   run: |
+      #     rm -f jokes-api.tar.gz
 
