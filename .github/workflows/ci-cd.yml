@@ -94,7 +94,7 @@ jobs:
 
       - name: Add server to known hosts
         run: |
-          ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ vars.DEPLOY_PORT }} -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
           echo '--------------'
           cat ~/.ssh/known_hosts
 
@@ -109,7 +109,7 @@ jobs:
 
       # - name: Prepare server directory
       #   run: |
-      #     ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+      #     ssh -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
       #       mkdir -p /opt/jokes-api
       #       mkdir -p /opt/jokes-api/data
       #     EOF
@@ -123,12 +123,12 @@ jobs:
 
       - name: Copy files to server
         run: |
-          scp -P ${{ secrets.DEPLOY_PORT }} ./go/compose.yml ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
-          scp -P ${{ secrets.DEPLOY_PORT }} jokes-api.tar.gz ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/jokes-api/
+          scp -P ${{ vars.DEPLOY_PORT }} ./go/compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
+          scp -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
 
       - name: Deploy on server
         run: |
-          ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          ssh -p ${{ vars.DEPLOY_PORT }} ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'EOF'
             set -e
             cd /opt/jokes-api
             
