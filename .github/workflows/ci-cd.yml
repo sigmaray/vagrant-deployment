@@ -137,6 +137,13 @@ jobs:
         run: |        
           scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} ./go/compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/compose.yml
           # scp -i ~/.ssh/private.key -o "StrictHostKeyChecking no" -P ${{ vars.DEPLOY_PORT }} jokes-api.tar.gz ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/jokes-api/
+      
+      - name: Breakpoint if tests failed
+        if: failure()
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: sigmaray
 
       # - name: Deploy on server
       #   run: |
