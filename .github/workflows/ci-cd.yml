@@ -105,7 +105,7 @@ jobs:
           echo "${{ vars.SSH_PRIVATE_KEY }}" > ~/.ssh/private.key
           dos2unix ~/.ssh/private.key
           chmod 600 ~/.ssh/private.key
-          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+          echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/private.key
 
